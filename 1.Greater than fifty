@@ -1,0 +1,59 @@
+trigger:(name:Greaterthanfifty)
+ 
+ trigger greaterthan50 on Opportunity (after insert,after update) {
+ 
+    if(Trigger.isInsert || Trigger.isUpdate && Trigger.isAfter){
+    OpportunityTriggerHandler.greaterthanfifty(Trigger.new);
+    }
+}
+
+class:(name:OpportunityTriggerHandler)
+
+public class OpportunityTriggerHandler {
+    public static void greaterthanfifty(List<Opportunity> ltOpp){
+        List<Account> ltAccounts = new List<Account>();
+        
+        Set<Id> setAccountIds = new Set<Id>();
+        for(opportunity obj : ltOpp){
+            If(obj.Amount>50000){
+                setAccountIds.add(obj.AccountId);   
+            }
+        }
+        If(setAccountIds.size()>0){
+            for (Account obj : [SELECT Id, is_goldenAccount__c FROM Account WHERE Id IN : setAccountIds]){
+                obj.is_goldenAccount__c = TRUE;
+                ltAccounts.add(obj);
+            }
+            
+            if(ltAccounts.size() > 0){
+                update ltAccounts;
+            }
+        }        
+    }   
+}
+
+
+test:(name:TestOpportunityTriggerHandler)
+
+@isTest
+public class TestOpportunityTriggerHandler {
+    @isTest
+    public static void testHandler(){
+        Account ac = new Account();
+        ac.name='testopp';
+        insert ac;
+        id acid = ac.id;
+        opportunity opp = new opportunity();
+        opp.name='assignment';
+        opp.stagename='closed won';
+        opp.Amount=55000;
+        opp.CloseDate=Date.newInstance(2021,02,25);
+        opp.AccountId = acid ;
+        insert opp;
+        Test.startTest();        
+        Account ant = [SELECT Id, is_goldenAccount__c FROM Account WHERE Id =: acid ];
+        System.debug(ant.is_goldenAccount__c );
+        System.assertequals(True,ant.is_goldenAccount__c );
+        Test.stopTest();
+    }
+}
