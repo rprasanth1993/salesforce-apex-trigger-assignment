@@ -1,0 +1,142 @@
+trigger:(name:AccountAutomatic)
+
+trigger AccountAutomatic on Account (after update , after insert) {
+   
+    if(Trigger.isAfter){
+        if(Trigger.isInsert){
+            CreateContactHandler.createContact(Trigger.New);
+        }
+        if(Trigger.isUpdate ){
+             CreateContactHandler.updateContact(Trigger.New);
+           
+        }
+    }
+}
+
+trigger:(name:ContactTrigger)
+
+trigger ContactTrigger on Contact (after insert) {
+     if(trigger.isafter && trigger.isinsert) {
+		contactHandler.UpdateAccount(Trigger.new);
+    }
+}
+
+class:(name:CreateContactHandler)
+
+public class CreateContactHandler {
+   public static void updateContact(List<Account> loa){
+       
+        set<id> accountId=new set<id>();
+        for(Account ac:loa){
+           
+            if(!String.isBlank(ac.Website)){
+                accountId.add(ac.Id);
+            }
+        }
+       
+        if(accountId.size()>0){
+            map<id,account> accountmap=new map<id,account>([select id,Website,(select id,Profile__c,FirstName,LastName from contacts) from account where id in:accountId]);
+            List<contact> clist=new List<contact>();
+            for(account ac:accountmap.values()){
+               
+                Account a =accountmap.get(ac.id);
+                List<contact>lstCont = a.contacts;
+                if(lstCont.size()>0){
+                    for(contact c:lstCont){                        
+                        c.Profile__c=ac.Website+'/'+c.FirstName.substring(0,1)+c.LastName;
+                        clist.add(c);
+                    }}
+               
+            }
+           
+           
+            if(!clist.isEmpty()){
+                update clist;
+            }
+           
+        }     
+    }
+   
+   
+    public static void createContact(List<Account> acc){
+        Set<id> accids = new Set<id>();
+        List<Contact> contlist =  new List<Contact>();  
+        List<Account> ac = new List<Account>();        
+        for(Account a :acc){
+          Contact cn =   new Contact();        
+            cn.AccountId=a.id;
+            cn.LastName = 'Default';
+            cn.FirstName = 'Info';
+            cn.Email = 'info@websitedomain.tld' + a.Name;
+            contlist.add(cn);  
+            accids.add(a.Id);          
+                    }
+           insert contlist;
+        for(Account acnt : [Select id , Only_Default_Contact__c from  Account Where id in : accids ])
+       {
+         acnt.Only_Default_Contact__c = True;
+           ac.add(acnt);
+      }
+       
+        update ac;
+    }  
+}
+
+class:(name:ContactHandler)
+
+public class ContactHandler {
+    public static void updateAccount(List<Contact> cont){
+        Set<id> accid = new Set<id>();
+        for(Contact c : cont){            
+            if(c.accountid!=null){
+                accid.add(c.accountid);
+            }
+        }
+       
+         if(accid.size()>0){
+        map<id,account> accountmap=new map<id,account>([select id,Website,(select id,Profile__c,FirstName,LastName from contacts) from account where id in:accid]);
+        List<Account> ant =  new List<Account>();
+        for(id i :accid ){
+           
+              Account a =accountmap.get(i);
+                List<contact>lstCont = a.contacts;
+            if(lstCont.size()>0){
+                a.Only_Default_Contact__c = False;
+                ant.add(a);
+            }
+        }
+             update ant;
+    }
+   
+    }
+    
+}
+
+test:
+
+@isTest
+public class TestTriggerHandler {
+
+     @isTest    
+    public static void testAccountWebsite(){
+       
+        Account a = new Account();
+        a.Name = 'Test';
+        insert a;
+       
+        id acid = a.id;
+       
+        Contact c = new Contact();
+        c.LastName = 'LTest';
+        c.FirstName = 'FTest';
+        c.AccountId = acid;
+        insert c;            
+       
+         Test.startTest();
+        a.Website = 'testwebsite';
+        update a;
+        Contact con = [Select id, Profile__c from Contact Where id=:c.Id ];      
+        System.assertEquals('testwebsite/FLTest', con.Profile__c);
+          Test.stopTest();
+    }
+}
