@@ -1,0 +1,72 @@
+trigger:(name:AccountTrigger)
+
+trigger AccountTrigger on Account (after update) {
+
+    if(Trigger.isUpdate  && Trigger.isAfter){
+        ContactTriggerHandler.updateContact(Trigger.New);
+    }
+}
+
+class:(name:ContactTriggerHandler)
+
+public class ContactTriggerHandler {
+    public static void updateContact(List<Account> loa){
+        
+        set<id> accountId=new set<id>();
+        for(Account ac:loa){
+            
+            if(!String.isBlank(ac.Website)){
+                accountId.add(ac.Id);
+            }
+        }
+        
+        if(accountId.size()>0){
+            map<id,account> accountmap=new map<id,account>([select id,Website,(select id,Profile__c,FirstName,LastName from contacts) from account where id in:accountId]);
+            List<contact> clist=new List<contact>();
+            for(account ac:accountmap.values()){
+                
+                Account a =accountmap.get(ac.id);
+                List<contact>lstCont = a.contacts;
+                if(lstCont.size()>0){
+                    for(contact c:lstCont){                        
+                        c.Profile__c=ac.Website+'/'+c.FirstName.substring(0,1)+c.LastName;
+                        clist.add(c);
+                    }
+                }
+            }
+                       
+            if(!clist.isEmpty()){
+                update clist;
+            }     
+        }    
+    }    
+}
+
+test:(name:TestTriggerHandler)
+
+@isTest
+public class TestTriggerHandler {
+
+     @isTest    
+    public static void testAccountWebsite(){
+       
+        Account a = new Account();
+        a.Name = 'Test';
+        insert a;
+       
+        id acid = a.id;
+       
+        Contact c = new Contact();
+        c.LastName = 'LTest';
+        c.FirstName = 'FTest';
+        c.AccountId = acid;
+        insert c;            
+       
+         Test.startTest();
+        a.Website = 'testwebsite';
+        update a;
+        Contact con = [Select id, Profile__c from Contact Where id=:c.Id ];      
+        System.assertEquals('testwebsite/FLTest', con.Profile__c);
+          Test.stopTest();
+    }
+}
