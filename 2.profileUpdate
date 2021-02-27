@@ -42,31 +42,3 @@ public class ContactTriggerHandler {
     }    
 }
 
-test:(name:TestTriggerHandler)
-
-@isTest
-public class TestTriggerHandler {
-
-     @isTest    
-    public static void testAccountWebsite(){
-       
-        Account a = new Account();
-        a.Name = 'Test';
-        insert a;
-       
-        id acid = a.id;
-       
-        Contact c = new Contact();
-        c.LastName = 'LTest';
-        c.FirstName = 'FTest';
-        c.AccountId = acid;
-        insert c;            
-       
-         Test.startTest();
-        a.Website = 'testwebsite';
-        update a;
-        Contact con = [Select id, Profile__c from Contact Where id=:c.Id ];      
-        System.assertEquals('testwebsite/FLTest', con.Profile__c);
-          Test.stopTest();
-    }
-}
