@@ -1,9 +1,9 @@
-trigger:(name:Greaterthanfifty)
+trigger:(name:OpportunityTrigger)
  
- trigger greaterthan50 on Opportunity (after insert,after update) {
- 
+trigger OpportunityTrigger on Opportunity (after insert,after update) {
+    
     if(Trigger.isInsert || Trigger.isUpdate && Trigger.isAfter){
-    OpportunityTriggerHandler.greaterthanfifty(Trigger.new);
+        OpportunityTriggerHandler.greaterthanfifty(Trigger.new);
     }
 }
 
