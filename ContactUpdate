@@ -30,7 +30,7 @@ public class CreateContactHandler {
             cn.AccountId=a.id;
             cn.LastName = 'Default';
             cn.FirstName = 'Info';
-            cn.Email = 'info@websitedomain.tld' + a.id;
+            cn.Email = 'info@websitedomain.tld';
             contlist.add(cn);  
             accids.add(a.Id);          
         }
